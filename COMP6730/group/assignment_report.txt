@@ -1,0 +1,177 @@
+
+Individual report for the COMP1730/6730 project assignment S2 2022
+-------------------------------------------------------------------
+
+Question 1: Write your name and ANU ID
+
+Name: Tianyang Han
+uid: u7549569
+
+
+-------------------------------------------------------------------
+
+Question 2: If you are part of a group, write the ANU IDs of ALL
+members of this group. If you are doing the assignment on your own
+(not part of a group), just write "not part of a group".
+
+Name: Congwei Yang
+uid: u7453564
+
+-------------------------------------------------------------------
+
+Question 3: Select a piece of code in your assignment solution that
+you have written, and explain:   
+--------------------------------------------- 
+My code selection:  (from line 216 to line 329)
+---------------------------------------------
+def explore_package(pkg_name):
+    '''
+    It will determine the type and read every python file
+
+    Parameters
+    ----------
+    pkg_name : the name of Stdlib package.
+
+    Returns
+    -------
+    file_code_line: integer
+        the total number of lines in all python flies.
+    num_cls: integer
+        the total number of custom types a package defines.
+
+    '''
+    import re
+    import importlib
+    import os
+    pkg = importlib.import_module(pkg_name)
+    info = vars(pkg)
+    for key, value in info.items():
+        if key == "__file__" and (value[-3:] != ".so" and value[-4:] != ".ddl"):
+            file_code_line = 0
+            num_cls = 0
+            if value[-11:] == "__init__.py":
+                # num = len(pkg_name)
+                for root, dirs, files in os.walk(value[:-12]):
+                    for f in files:
+                        if f[-3:] == ".py":
+                            with open(os.path.join(root, f), 'rb') as file1:
+                                file_code_line += file1.read().count(
+                                    '\n'.encode())  # count the number of "\n" to count lines.
+                                num_cls += cal_cls(os.path.join(root, f))  # count number of classes of this .py file
+                                file1.close()
+                    return (file_code_line, num_cls)
+            else:
+                with open(value, 'rb') as file1:
+                    file_code_line += file1.read().count('\n'.encode())
+                    num_cls += cal_cls(value)
+                    file1.close()
+                return (file_code_line, num_cls)
+    return (0, 0)
+
+
+def cal_cls(value):
+    '''
+    It is use to calculate the number of class in a python file
+
+    Parameters
+    ----------
+    value : string
+        a python file.
+
+    Returns
+    -------
+    num_class : integer
+        the number of class in a python file.
+
+    '''
+
+    num_class = 0
+    flag = 0
+    for count, line in enumerate(open(value, 'rb')):
+        flag += line.count("\"\"\"".encode())  # keywords "class " is only valid when the times of "\"\"\"" %2 == 0
+        if (line.__contains__("class ".encode()) and (line[-2:] == ':\n') and (flag % 2 == 0)):
+            num_class += 1
+    return num_class  # return the number of class in one python file
+
+
+def task4():
+    '''
+    It shows the 5 most lines packages , 5 least lines packages,5 most classes packages and
+    no classes packages in a python file.
+
+    Returns
+    -------
+    None.
+
+    '''
+    sys_infor, module_name_set = get_stdlib_packages()
+    module_name_list = list(module_name_set)
+    module_name_list.sort()
+    imported, not_imported = get_real(module_name_list)
+    res_line = {}
+    res_cls = {}
+    for i in imported:  # for loop on each importable pkgs. and store their line number and class number respectively
+        (file_code_line, num_cls) = explore_package(i)
+        res_line[i] = file_code_line
+        res_cls[i] = num_cls
+    res_line = sorted(res_line, key=res_line.__getitem__)  # sorted by line number
+    res_line.reverse()
+    res_cls_sort = sorted(res_cls, key=res_cls.__getitem__)
+    res_cls_sort.reverse()
+
+    print_res_line_most = ""
+    print_res_line_least = ""
+    for i in res_line[0:5]:
+        print_res_line_most += i + ", "  # output five most lines packages
+    for i in res_line[-5:]:
+        print_res_line_least += i + ", "  # output five least lines packages
+
+    print_res_cls_most = ""
+    print_res_cls_none = ""
+    for i in res_cls_sort[0:5]:
+        print_res_cls_most += i + ", "  # output five most classes packages
+    for key, value in res_cls.items():
+        if value == 0:
+            print_res_cls_none += key + ", "  # output the result if no classes packages
+
+    print("5 most lines packages:", print_res_line_most[:-2])
+    print("5 least lines packages:", print_res_line_least[:-2])
+    print("5 most classes packages:", print_res_cls_most[:-2])
+    print("NO classes packages:", print_res_cls_none[:-2])
+---------------------------------------------
+
+(a) What does this piece of code do?
+
+There are three functions of this part in Task4. 
+This piece of code, for task4() function, it can calculate the lines and classes of all packages in Python’s Standard Library, StdLib. And it will print out top5 packages having most lines in their .py file , top5 packages having least lines , top5 packages having most classes and packages which does not have any class as results.
+
+For explore_package(), it can calculate the lines and classes of one specific package which is the parameter of this function. And it will return a tuple with two elements the number of lines and classes.
+
+For cal_cls() function, it can detect the numbers of classes of a single .py file(As some packages might have more than one .py files). It would be called in the loop of explore_package() function. And its return is a int value which denotes the number of classes of this .py file.
+
+
+(b) How does it work?
+
+For these three functions, they are a kind of nested relationship. explore_package() is called in the loop of task4(), cal_cls() is called in the loop of explore_package().
+
+For task4()'s logic, it does this by iterating through each of the importable packages, finding their respective number of classes and lines and storing them in order in two lists res_line and res_cls. Then print top5 out after sorting them.
+
+For explore_package()'s logic, its input is a name of specific pkg. So I first iterate through its information (vars[name]), and find the attribute called "__file__", which stores its .py file address in the laptop. Then I will check whether the name of "__file__" is end with "__init__.py", because if a pkg has only a single .py file itself, file name will be the package's name.py. But if a pkg has more than one .py file, it would store the "__init__.py" file in information. Then if it has only one .py file, I would open it and calculate the number of its lines and classes. Else I will use os.walk to walk through the document and open those files end up with the name ".py" (as the document might contain other files), and sum up all of these files' lines and classes number. (Because they are all belong to the same package). The way to record lines number is count the number of '\n', as it denotes the line changing. The way to record classes is to call cal_cls() function.
+
+For cal_cls()'s logic,  its input is also a str denoting a specific .py file. I count the class number by detecting the times of "class " which end up with':\n' (because for a valid class definition, its line is only contains "class(name):'\n'"). And to prevent counting the annotation or doctoring, I also set a flag to calculate the number of "\"\"\"". This function return the int value of classes number.
+
+
+(c) What other possible ways did you consider to implement this
+functionality, and why did you choose the one you did?
+
+For example, for counting lines number, I can iterate through all the line by using "file.readline()" and count+=1 one by one, but it is time-consuming. So after evaluation, I choose counting the number of "\n" instead. 
+
+For counting class number, I think I found an easy way. As if I write a function to check whether "class " keyword is in the annotation each time, the function would be complicated. So I conclude the conditions of the class definition.(that is because I only count class in each line of class definition, so that I won't re-count the same class)
+
+For task4(), I think that is the only way to solve by iterating through the importable pkgs list and count their own line numbers and class numbers respectively.
+
+
+-------------------------------------------------------------------
+Supplement: my task6 network png, which is save in dpi=1000.
+
+And because txt cannot insert png image file, so I can't attach it with my report. In my project.py main function, I add a line task6(), which will save a clear image (dpi=1000) in current path name "u7549569_task6.png".
